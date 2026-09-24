@@ -2,37 +2,38 @@ import db from '../database/db.js';
 
 const STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'completed', 'cancelled'];
 
-export function getDashboardStats(req, res) {
-  const totalOrders = db.prepare('SELECT COUNT(*) AS n FROM orders').get().n;
+export async function getDashboardStats(req, res) {
+  const totalOrders = (await db.prepare('SELECT COUNT(*) AS n FROM orders').get()).n;
 
+  const statusRows = await db.prepare('SELECT status, COUNT(*) AS n FROM orders GROUP BY status').all();
   const statusCounts = Object.fromEntries(
-    STATUSES.map((s) => [s, db.prepare('SELECT COUNT(*) AS n FROM orders WHERE status = ?').get(s).n])
+    STATUSES.map((s) => [s, statusRows.find((r) => r.status === s)?.n ?? 0])
   );
 
-  const revenue = db
+  const revenue = (await db
     .prepare("SELECT COALESCE(SUM(total),0) AS sum FROM orders WHERE payment_status = 'paid'")
-    .get().sum;
+    .get()).sum;
 
-  const totalSales = db
+  const totalSales = (await db
     .prepare("SELECT COALESCE(SUM(total),0) AS sum FROM orders WHERE status != 'cancelled'")
-    .get().sum;
+    .get()).sum;
 
-  const newEnquiries = db
+  const newEnquiries = (await db
     .prepare("SELECT COUNT(*) AS n FROM custom_requests WHERE status = 'new'")
-    .get().n;
+    .get()).n;
 
-  const upcomingDeliveries = db
+  const upcomingDeliveries = (await db
     .prepare(
       "SELECT COUNT(*) AS n FROM orders WHERE delivery_date >= date('now') AND status NOT IN ('completed','cancelled')"
     )
-    .get().n;
+    .get()).n;
 
-  const unreadMessages = db
+  const unreadMessages = (await db
     .prepare("SELECT COUNT(*) AS n FROM messages WHERE sender_type = 'customer' AND is_read = 0")
-    .get().n;
+    .get()).n;
 
   // Revenue trend — last 14 days of paid orders
-  const revenueTrend = db
+  const revenueTrend = await db
     .prepare(
       `SELECT date(created_at) AS day, COALESCE(SUM(total), 0) AS revenue
        FROM orders
@@ -43,7 +44,7 @@ export function getDashboardStats(req, res) {
     .all();
 
   // Popular cakes — by quantity sold across all non-cancelled orders
-  const popularCakes = db
+  const popularCakes = await db
     .prepare(
       `SELECT oi.cake_name, SUM(oi.quantity) AS units_sold, SUM(oi.quantity * oi.unit_price) AS revenue
        FROM order_items oi
@@ -55,7 +56,7 @@ export function getDashboardStats(req, res) {
     )
     .all();
 
-  const recentOrders = db
+  const recentOrders = await db
     .prepare(
       `SELECT o.id, o.order_number, o.status, o.total, o.delivery_date, o.created_at,
               COALESCE(o.customer_name, u.full_name, 'Guest') AS customer_name
@@ -66,7 +67,7 @@ export function getDashboardStats(req, res) {
     )
     .all();
 
-  const recentEnquiries = db
+  const recentEnquiries = await db
     .prepare(
       `SELECT id, full_name, occasion, status, created_at
        FROM custom_requests

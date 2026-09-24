@@ -1,13 +1,6 @@
 import { verifyToken } from '../utils/jwt.js';
 
-const HEADER_FOR_COOKIE = {
-  elora_customer_token: 'x-customer-token',
-  elora_admin_token: 'x-admin-token',
-};
-
 function extractToken(req, cookieName) {
-  const headerToken = req.headers[HEADER_FOR_COOKIE[cookieName]];
-  if (headerToken) return headerToken;
   const bearer = req.headers.authorization;
   if (bearer && bearer.startsWith('Bearer ')) return bearer.slice(7);
   if (req.cookies && req.cookies[cookieName]) return req.cookies[cookieName];

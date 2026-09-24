@@ -1,42 +1,56 @@
 import axios from 'axios';
+import { upload } from '@vercel/blob/client';
+
+// Production (Vercel): the site and API share a domain, so the API is at /api.
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api');
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
+  baseURL: API_URL,
   withCredentials: true,
 });
 
-// In production the site and API are on different domains, and some browsers
-// (Safari, iOS) block the API's cross-site cookie. So we also keep the token
-// returned at login and send it as a header the server accepts.
-const TOKEN_KEYS = {
-  customer: 'elora_customer_token',
-  admin: 'elora_admin_token',
-};
-const TOKEN_HEADERS = {
-  customer: 'X-Customer-Token',
-  admin: 'X-Admin-Token',
-};
+// Vercel caps a request to the API at 4.5 MB, too small for cake videos. So in
+// production each file is uploaded straight from the browser to Vercel Blob,
+// and the API receives a small JSON descriptor (url/type/name/size) in its place.
+const DIRECT_UPLOADS = import.meta.env.PROD && import.meta.env.VITE_DIRECT_UPLOADS !== 'false';
 
-export function setAuthToken(type, token) {
-  try {
-    if (token) localStorage.setItem(TOKEN_KEYS[type], token);
-    else localStorage.removeItem(TOKEN_KEYS[type]);
-  } catch {
-    // storage unavailable (private mode) — cookie auth still applies
-  }
+async function uploadFilesToBlob(formData) {
+  const entries = [...formData.entries()];
+  const resolved = await Promise.all(
+    entries.map(async ([key, value]) => {
+      if (!(value instanceof Blob)) return [key, value];
+      const name = value.name || 'upload';
+      const blob = await upload(`elora/${name}`, value, {
+        access: 'public',
+        handleUploadUrl: `${API_URL}/uploads/blob`,
+        contentType: value.type || undefined,
+      });
+      const descriptor = { url: blob.url, contentType: blob.contentType || value.type, name, size: value.size };
+      return [key, JSON.stringify(descriptor)];
+    })
+  );
+  const next = new FormData();
+  resolved.forEach(([key, value]) => next.append(key, value));
+  return next;
 }
 
-api.interceptors.request.use((config) => {
-  for (const type of Object.keys(TOKEN_KEYS)) {
-    let token = null;
-    try {
-      token = localStorage.getItem(TOKEN_KEYS[type]);
-    } catch {
-      // ignore
+// Only when the server has Blob storage configured (it isn't when running locally).
+let blobEnabled;
+function isBlobEnabled() {
+  blobEnabled ??= axios
+    .get(`${API_URL}/uploads/blob`)
+    .then((r) => Boolean(r.data?.enabled))
+    .catch(() => false);
+  return blobEnabled;
+}
+
+if (DIRECT_UPLOADS) {
+  api.interceptors.request.use(async (config) => {
+    if (config.data instanceof FormData && (await isBlobEnabled())) {
+      config.data = await uploadFilesToBlob(config.data);
     }
-    if (token) config.headers[TOKEN_HEADERS[type]] = token;
-  }
-  return config;
-});
+    return config;
+  });
+}
 
 export default api;

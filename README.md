@@ -302,20 +302,30 @@ elora-patisserie/
 
 ## Running it locally
 
-**Backend:**
+The website and the API run together as **one app** on one port.
+
 ```bash
-cd server
-npm install
-npm run seed   # creates the admin account + sample cakes (only needed once)
-npm run dev    # http://localhost:4000
+npm install                      # API dependencies (project root)
+npm --prefix client install      # website dependencies
+npm start                        # builds the site, then serves everything at http://localhost:4000
 ```
 
-**Frontend** (in a second terminal):
-```bash
-cd client
-npm install
-npm run dev    # http://localhost:5173
-```
+The admin account and sample cakes are created automatically on first start.
+Data is stored in `server/database/elora.sqlite`; uploads go to `server/uploads/`.
+
+For live-reload while editing the website, run `npm --prefix server run dev` and
+`npm --prefix client run dev` in two terminals and open http://localhost:5173.
+
+## Deploying (Vercel only)
+
+One Vercel project serves both: the site from `client/dist`, and the Express API as a
+Vercel Function (`api/index.js`, see `vercel.json`). It needs:
+
+- **Database:** a Turso (hosted SQLite) database, free Starter plan via Vercel Marketplace,
+  which provides `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
+- **Photos/videos:** a Vercel Blob store, which provides `BLOB_READ_WRITE_TOKEN`.
+- **Env vars:** `JWT_SECRET`, `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD` (plus the optional Stripe keys).
+- **Project settings:** Root Directory = repository root; build settings come from `vercel.json`.
 
 ### Default accounts
 

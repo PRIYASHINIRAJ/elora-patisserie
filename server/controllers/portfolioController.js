@@ -11,7 +11,7 @@ function parseJsonArray(value) {
   }
 }
 
-export function listPortfolio(req, res) {
+export async function listPortfolio(req, res) {
   const { category, occasion } = req.query;
 
   let query = 'SELECT * FROM portfolio_items WHERE 1=1';
@@ -26,30 +26,30 @@ export function listPortfolio(req, res) {
   }
   query += ' ORDER BY featured DESC, created_at DESC';
 
-  const items = db.prepare(query).all(...params);
-  const withMedia = items.map((item) => {
-    const images = db
+  const items = await db.prepare(query).all(...params);
+  const withMedia = await Promise.all(items.map(async (item) => {
+    const images = await db
       .prepare('SELECT * FROM portfolio_images WHERE portfolio_id = ? ORDER BY is_primary DESC, sort_order ASC')
       .all(item.id);
-    const videos = db.prepare('SELECT * FROM portfolio_videos WHERE portfolio_id = ? ORDER BY sort_order ASC').all(item.id);
+    const videos = await db.prepare('SELECT * FROM portfolio_videos WHERE portfolio_id = ? ORDER BY sort_order ASC').all(item.id);
     return { ...item, tags: parseJsonArray(item.tags), images, videos };
-  });
+  }));
 
   res.json({ items: withMedia });
 }
 
-export function getPortfolioItem(req, res) {
-  const item = db.prepare('SELECT * FROM portfolio_items WHERE id = ?').get(req.params.id);
+export async function getPortfolioItem(req, res) {
+  const item = await db.prepare('SELECT * FROM portfolio_items WHERE id = ?').get(req.params.id);
   if (!item) return res.status(404).json({ error: 'Portfolio item not found.' });
 
-  const images = db
+  const images = await db
     .prepare('SELECT * FROM portfolio_images WHERE portfolio_id = ? ORDER BY is_primary DESC, sort_order ASC')
     .all(item.id);
-  const videos = db.prepare('SELECT * FROM portfolio_videos WHERE portfolio_id = ? ORDER BY sort_order ASC').all(item.id);
+  const videos = await db.prepare('SELECT * FROM portfolio_videos WHERE portfolio_id = ? ORDER BY sort_order ASC').all(item.id);
 
   let linkedCake = null;
   if (item.linked_cake_id) {
-    linkedCake = db.prepare('SELECT id, name, slug, base_price FROM cakes WHERE id = ?').get(item.linked_cake_id);
+    linkedCake = await db.prepare('SELECT id, name, slug, base_price FROM cakes WHERE id = ?').get(item.linked_cake_id);
   }
 
   res.json({ item: { ...item, tags: parseJsonArray(item.tags), images, videos, linkedCake } });

@@ -1,8 +1,8 @@
 import db from '../database/db.js';
 import { stripe, isStripeConfigured, requireStripeConfigured } from '../services/stripeClient.js';
 
-function getDeliveryFee() {
-  const row = db.prepare("SELECT value FROM business_settings WHERE key = 'delivery_fee'").get();
+async function getDeliveryFee() {
+  const row = await db.prepare("SELECT value FROM business_settings WHERE key = 'delivery_fee'").get();
   const parsed = Number(row?.value);
   return Number.isFinite(parsed) ? parsed : 25;
 }
@@ -23,11 +23,11 @@ function generateOrderNumber() {
   return `ELR-${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 90 + 10)}`;
 }
 
-function attachOrderDetails(order) {
-  const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
-  const itemsWithCustomization = items.map((item) => {
+async function attachOrderDetails(order) {
+  const items = await db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
+  const itemsWithCustomization = await Promise.all(items.map(async (item) => {
     const customization = item.customization_id
-      ? db.prepare('SELECT * FROM customizations WHERE id = ?').get(item.customization_id)
+      ? await db.prepare('SELECT * FROM customizations WHERE id = ?').get(item.customization_id)
       : null;
     return {
       ...item,
@@ -39,10 +39,10 @@ function attachOrderDetails(order) {
           }
         : null,
     };
-  });
+  }));
 
-  const address = order.address_id ? db.prepare('SELECT * FROM addresses WHERE id = ?').get(order.address_id) : null;
-  const payments = db.prepare('SELECT * FROM payments WHERE order_id = ? ORDER BY created_at DESC').all(order.id);
+  const address = order.address_id ? await db.prepare('SELECT * FROM addresses WHERE id = ?').get(order.address_id) : null;
+  const payments = await db.prepare('SELECT * FROM payments WHERE order_id = ? ORDER BY created_at DESC').all(order.id);
 
   return { ...order, items: itemsWithCustomization, address, payments };
 }
@@ -63,11 +63,11 @@ function parseJsonArraySafe(value) {
 // Server is the source of truth for pricing — never trust a client-supplied
 // unit price. Base price comes from the cake row; a size surcharge (if any)
 // comes from that cake's admin-configured `sizes` list, matched by label.
-function resolveAuthoritativePrice(item) {
+async function resolveAuthoritativePrice(item) {
   if (!item.cakeId) {
     throw new Error('Every order item must reference a real cake.');
   }
-  const cake = db.prepare('SELECT * FROM cakes WHERE id = ?').get(item.cakeId);
+  const cake = await db.prepare('SELECT * FROM cakes WHERE id = ?').get(item.cakeId);
   if (!cake || cake.status !== 'published') {
     throw new Error(`"${item.cakeName || 'This item'}" is no longer available.`);
   }
@@ -85,7 +85,7 @@ function resolveAuthoritativePrice(item) {
   return { cakeName: cake.name, unitPrice: cake.base_price + sizeSurcharge };
 }
 
-export function createOrder(req, res) {
+export async function createOrder(req, res) {
   const {
     customerName, customerEmail, customerPhone,
     addressLine1, addressLine2, city, state, postcode,
@@ -109,25 +109,26 @@ export function createOrder(req, res) {
 
   let pricedItems;
   try {
-    pricedItems = items.map((item) => ({ ...item, ...resolveAuthoritativePrice(item) }));
+    pricedItems = [];
+    for (const item of items) pricedItems.push({ ...item, ...(await resolveAuthoritativePrice(item)) });
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
 
   const subtotal = pricedItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
 
-  const minOrderRow = db.prepare("SELECT value FROM business_settings WHERE key = 'minimum_order'").get();
+  const minOrderRow = await db.prepare("SELECT value FROM business_settings WHERE key = 'minimum_order'").get();
   const minimumOrder = Number(minOrderRow?.value) || 0;
   if (subtotal < minimumOrder) {
     return res.status(400).json({ error: `Minimum order is RM ${minimumOrder.toFixed(2)}. Please add more to your cart.` });
   }
 
-  const deliveryFee = deliveryType === 'pickup' ? 0 : getDeliveryFee();
+  const deliveryFee = deliveryType === 'pickup' ? 0 : await getDeliveryFee();
   const total = subtotal + deliveryFee;
 
   let addressId = null;
   if (deliveryType !== 'pickup') {
-    const addrInfo = db
+    const addrInfo = await db
       .prepare(
         `INSERT INTO addresses (user_id, recipient_name, phone, line1, line2, city, state, postcode)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -137,7 +138,7 @@ export function createOrder(req, res) {
   }
 
   const orderNumber = generateOrderNumber();
-  const orderInfo = db
+  const orderInfo = await db
     .prepare(
       `INSERT INTO orders
        (order_number, user_id, status, payment_status, delivery_type, delivery_date, delivery_time_slot,
@@ -163,11 +164,11 @@ export function createOrder(req, res) {
      VALUES (?, ?, ?, ?, ?, ?)`
   );
 
-  pricedItems.forEach((item) => {
+  for (const item of pricedItems) {
     let customizationId = null;
     const c = item.customization;
     if (c) {
-      const info = insertCustomization.run({
+      const info = await insertCustomization.run({
         size: c.size || null,
         flavor: c.flavour || null,
         filling: c.filling || null,
@@ -175,7 +176,7 @@ export function createOrder(req, res) {
         topper_text: null,
         message_on_cake: c.message?.text || null,
         extra_notes: c.otherRequirements || null,
-        extra_cost: item.unitPrice - (db.prepare('SELECT base_price FROM cakes WHERE id = ?').get(item.cakeId)?.base_price || item.unitPrice),
+        extra_cost: item.unitPrice - ((await db.prepare('SELECT base_price FROM cakes WHERE id = ?').get(item.cakeId))?.base_price || item.unitPrice),
         font: c.message?.font || null,
         message_placement: c.message?.placement || null,
         occasion: c.occasion || null,
@@ -185,23 +186,23 @@ export function createOrder(req, res) {
       });
       customizationId = info.lastInsertRowid;
     }
-    insertItem.run(orderId, item.cakeId || null, item.cakeName, item.quantity, item.unitPrice, customizationId);
-  });
+    await insertItem.run(orderId, item.cakeId || null, item.cakeName, item.quantity, item.unitPrice, customizationId);
+  }
 
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+  const order = await db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
 
   if (req.user?.id) {
-    db.prepare(
+    await db.prepare(
       `INSERT INTO notifications (recipient_type, recipient_id, type, title, body, link)
        VALUES ('customer', ?, 'order_received', 'Order received', ?, '/orders/${orderId}')`
     ).run(req.user.id, `We've received your order ${orderNumber}. Complete payment to confirm it.`);
   }
-  db.prepare(
+  await db.prepare(
     `INSERT INTO notifications (recipient_type, type, title, body, link)
      VALUES ('admin', 'new_order', 'New order', ?, '/admin/orders/${orderId}')`
   ).run(`${customerName} placed an order (${orderNumber}) for RM ${total.toFixed(2)}.`);
 
-  res.status(201).json({ order: attachOrderDetails(order) });
+  res.status(201).json({ order: await attachOrderDetails(order) });
 }
 
 // ---------------------------------------------------------------------------
@@ -210,7 +211,7 @@ export function createOrder(req, res) {
 export async function createCheckoutSession(req, res) {
   if (!requireStripeConfigured(res)) return;
 
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  const order = await db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found.' });
   if (req.user && order.user_id !== req.user.id) {
     return res.status(403).json({ error: 'Not authorized to pay for this order.' });
@@ -219,7 +220,7 @@ export async function createCheckoutSession(req, res) {
     return res.status(400).json({ error: 'This order has already been paid.' });
   }
 
-  const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
+  const items = await db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
   const lineItems = items.map((item) => ({
     price_data: {
       currency: 'myr',
@@ -251,7 +252,7 @@ export async function createCheckoutSession(req, res) {
       metadata: { order_id: String(order.id), order_number: order.order_number },
     });
 
-    db.prepare(
+    await db.prepare(
       "UPDATE orders SET stripe_checkout_session_id = ?, payment_status = 'processing', updated_at = datetime('now') WHERE id = ?"
     ).run(session.id, order.id);
 
@@ -265,24 +266,24 @@ export async function createCheckoutSession(req, res) {
 // ---------------------------------------------------------------------------
 // Customer: retrieve own order (confirmation + status)
 // ---------------------------------------------------------------------------
-export function getMyOrder(req, res) {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+export async function getMyOrder(req, res) {
+  const order = await db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found.' });
   if (order.user_id !== req.user.id) {
     return res.status(403).json({ error: 'Not authorized to view this order.' });
   }
-  res.json({ order: attachOrderDetails(order), stripeConfigured: isStripeConfigured() });
+  res.json({ order: await attachOrderDetails(order), stripeConfigured: isStripeConfigured() });
 }
 
-export function listMyOrders(req, res) {
-  const orders = db.prepare('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
-  res.json({ orders: orders.map(attachOrderDetails) });
+export async function listMyOrders(req, res) {
+  const orders = await db.prepare('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
+  res.json({ orders: await Promise.all(orders.map(attachOrderDetails)) });
 }
 
 // ---------------------------------------------------------------------------
 // Admin
 // ---------------------------------------------------------------------------
-export function adminListOrders(req, res) {
+export async function adminListOrders(req, res) {
   const { status, search } = req.query;
   let query = 'SELECT * FROM orders WHERE 1=1';
   const params = [];
@@ -296,21 +297,21 @@ export function adminListOrders(req, res) {
     params.push(like, like, like);
   }
   query += ' ORDER BY created_at DESC';
-  const orders = db.prepare(query).all(...params);
-  res.json({ orders: orders.map(attachOrderDetails) });
+  const orders = await db.prepare(query).all(...params);
+  res.json({ orders: await Promise.all(orders.map(attachOrderDetails)) });
 }
 
-export function adminGetOrder(req, res) {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+export async function adminGetOrder(req, res) {
+  const order = await db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found.' });
-  res.json({ order: attachOrderDetails(order) });
+  res.json({ order: await attachOrderDetails(order) });
 }
 
-export function adminUpdateNotes(req, res) {
+export async function adminUpdateNotes(req, res) {
   const { notes } = req.body;
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  const order = await db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found.' });
-  db.prepare("UPDATE orders SET admin_notes = ?, updated_at = datetime('now') WHERE id = ?").run(notes || null, order.id);
+  await db.prepare("UPDATE orders SET admin_notes = ?, updated_at = datetime('now') WHERE id = ?").run(notes || null, order.id);
   res.json({ message: 'Notes saved.' });
 }
 
@@ -325,18 +326,18 @@ const STATUS_NOTIFICATION_TITLE = {
   cancelled: 'Order cancelled',
 };
 
-export function adminUpdateStatus(req, res) {
+export async function adminUpdateStatus(req, res) {
   const { status } = req.body;
   if (!STATUS_FLOW.includes(status)) {
     return res.status(400).json({ error: 'Invalid status.' });
   }
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  const order = await db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found.' });
 
-  db.prepare("UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, order.id);
+  await db.prepare("UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, order.id);
 
   if (order.user_id) {
-    db.prepare(
+    await db.prepare(
       `INSERT INTO notifications (recipient_type, recipient_id, type, title, body, link)
        VALUES ('customer', ?, 'order_status', ?, ?, '/orders/${order.id}')`
     ).run(
@@ -347,7 +348,7 @@ export function adminUpdateStatus(req, res) {
   }
 
   if (status === 'cancelled') {
-    db.prepare(
+    await db.prepare(
       `INSERT INTO notifications (recipient_type, type, title, body, link)
        VALUES ('admin', 'order_cancelled', 'Order cancelled', ?, '/admin/orders/${order.id}')`
     ).run(`Order ${order.order_number} was cancelled.`);

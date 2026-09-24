@@ -1,20 +1,24 @@
 import bcrypt from 'bcryptjs';
-import dotenv from 'dotenv';
-import db from './db.js';
+import '../env.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import db, { dbReady } from './db.js';
 
-dotenv.config();
 
-function run() {
+export async function seed() {
+  await dbReady;
   const adminEmail = process.env.ADMIN_SEED_EMAIL || 'admin@elorapatisserie.com';
   const adminPassword = process.env.ADMIN_SEED_PASSWORD || 'EloraAdmin123!';
 
-  const existingAdmin = db.prepare('SELECT id FROM admins WHERE email = ?').get(adminEmail);
-  if (!existingAdmin) {
+  const existingAdmin = await db.prepare('SELECT id FROM admins WHERE email = ?').get(adminEmail);
+  if (!existingAdmin && process.env.NODE_ENV === 'production' && !process.env.ADMIN_SEED_PASSWORD) {
+    console.warn('ADMIN_SEED_PASSWORD is not set; not creating an admin with the default password.');
+  } else if (!existingAdmin) {
     const hash = bcrypt.hashSync(adminPassword, 12);
-    db.prepare(
+    await db.prepare(
       'INSERT INTO admins (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)'
     ).run('Élora Studio Admin', adminEmail, hash, 'owner');
-    console.log(`Admin seeded: ${adminEmail} / ${adminPassword}`);
+    console.log(`Admin seeded: ${adminEmail}`);
   } else {
     console.log('Admin already exists, skipping.');
   }
@@ -31,17 +35,17 @@ function run() {
   const insertCategory = db.prepare(
     'INSERT OR IGNORE INTO categories (name, slug, description) VALUES (@name, @slug, @description)'
   );
-  categories.forEach((c) => insertCategory.run(c));
+  for (const c of categories) await insertCategory.run(c);
 
-  const cakeCount = db.prepare('SELECT COUNT(*) AS n FROM cakes').get().n;
+  const cakeCount = (await db.prepare('SELECT COUNT(*) AS n FROM cakes').get()).n;
   if (cakeCount === 0) {
-    const getCatId = (slug) => db.prepare('SELECT id FROM categories WHERE slug = ?').get(slug).id;
+    const getCatId = async (slug) => (await db.prepare('SELECT id FROM categories WHERE slug = ?').get(slug)).id;
 
     const cakes = [
       {
         name: 'Noir Champagne',
         slug: 'noir-champagne',
-        category_id: getCatId('wedding'),
+        category_id: await getCatId('wedding'),
         description: 'Dark chocolate sponge, champagne mousseline, gold leaf lattice. A three-tier statement for the reception table.',
         base_price: 880,
         serves: '60–80 guests',
@@ -52,7 +56,7 @@ function run() {
       {
         name: 'Rose Mocha Étude',
         slug: 'rose-mocha-etude',
-        category_id: getCatId('anniversary'),
+        category_id: await getCatId('anniversary'),
         description: 'Espresso genoise layered with dusty-rose buttercream and cocoa nib praline.',
         base_price: 320,
         serves: '10–14 guests',
@@ -63,7 +67,7 @@ function run() {
       {
         name: 'Ivory Camélia',
         slug: 'ivory-camelia',
-        category_id: getCatId('engagement'),
+        category_id: await getCatId('engagement'),
         description: 'Vanilla bean chiffon, white chocolate ganache, hand-piped sugar camellias.',
         base_price: 410,
         serves: '14–18 guests',
@@ -74,7 +78,7 @@ function run() {
       {
         name: 'Velours Rouge',
         slug: 'velours-rouge',
-        category_id: getCatId('valentines-day'),
+        category_id: await getCatId('valentines-day'),
         description: 'Classic red velvet, whipped mascarpone, dark chocolate shard crown.',
         base_price: 260,
         serves: '8–10 guests',
@@ -85,7 +89,7 @@ function run() {
       {
         name: "L'Atelier Birthday",
         slug: 'atelier-birthday',
-        category_id: getCatId('birthday'),
+        category_id: await getCatId('birthday'),
         description: 'Signature vanilla-caramel construction with a hand-lettered sugar plaque.',
         base_price: 240,
         serves: '8–10 guests',
@@ -96,7 +100,7 @@ function run() {
       {
         name: 'Maison Gold Corporate',
         slug: 'maison-gold-corporate',
-        category_id: getCatId('corporate'),
+        category_id: await getCatId('corporate'),
         description: 'Branded monogram tier, almond dacquoise, edible gold branding plaque.',
         base_price: 520,
         serves: '30–40 guests',
@@ -123,17 +127,17 @@ function run() {
       'maison-gold-corporate': 'https://images.unsplash.com/photo-1607478900766-efe13248b125?q=80&w=1200',
     };
 
-    cakes.forEach((cake) => {
-      const info = insertCake.run(cake);
-      insertImage.run(info.lastInsertRowid, placeholderImages[cake.slug]);
-    });
+    for (const cake of cakes) {
+      const info = await insertCake.run(cake);
+      await insertImage.run(info.lastInsertRowid, placeholderImages[cake.slug]);
+    }
 
     console.log(`Seeded ${cakes.length} cakes.`);
   } else {
     console.log('Cakes already seeded, skipping.');
   }
 
-  const portfolioCount = db.prepare('SELECT COUNT(*) AS n FROM portfolio_items').get().n;
+  const portfolioCount = (await db.prepare('SELECT COUNT(*) AS n FROM portfolio_items').get()).n;
   if (portfolioCount === 0) {
     const portfolioSeed = [
       {
@@ -190,10 +194,10 @@ function run() {
       'INSERT INTO portfolio_images (portfolio_id, url, is_primary, sort_order) VALUES (?, ?, 1, 0)'
     );
 
-    portfolioSeed.forEach((p) => {
-      const info = insertPortfolio.run(p);
-      insertPortfolioImage.run(info.lastInsertRowid, p.image);
-    });
+    for (const p of portfolioSeed) {
+      const info = await insertPortfolio.run(p);
+      await insertPortfolioImage.run(info.lastInsertRowid, p.image);
+    }
 
     console.log(`Seeded ${portfolioSeed.length} portfolio items.`);
   } else {
@@ -218,9 +222,12 @@ function run() {
   const insertSetting = db.prepare(
     'INSERT OR IGNORE INTO business_settings (key, value) VALUES (@key, @value)'
   );
-  settings.forEach((s) => insertSetting.run(s));
+  for (const s of settings) await insertSetting.run(s);
 
   console.log('Seed complete.');
 }
 
-run();
+// `npm run seed` runs it directly; the app also calls seed() on a fresh database.
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  await seed();
+}

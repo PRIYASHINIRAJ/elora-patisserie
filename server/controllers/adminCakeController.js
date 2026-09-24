@@ -1,11 +1,5 @@
 import db from '../database/db.js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { publicUrlFor } from '../middleware/upload.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadsRoot = path.join(__dirname, '..', 'uploads');
+import { removeStoredFile } from '../middleware/upload.js';
 
 function slugify(text) {
   return text
@@ -17,8 +11,8 @@ function slugify(text) {
     .replace(/-+/g, '-');
 }
 
-function nextCatalogNumber() {
-  const { n } = db.prepare('SELECT COUNT(*) AS n FROM cakes').get();
+async function nextCatalogNumber() {
+  const { n } = await db.prepare('SELECT COUNT(*) AS n FROM cakes').get();
   return `N° ${String(n + 1).padStart(3, '0')}`;
 }
 
@@ -33,17 +27,11 @@ function parseJsonArray(value) {
   }
 }
 
-function unlinkQuiet(relativeUrl) {
-  if (!relativeUrl || !relativeUrl.startsWith('/uploads/')) return;
-  const filePath = path.join(uploadsRoot, relativeUrl.replace('/uploads/', ''));
-  fs.unlink(filePath, () => {});
-}
-
-function attachMedia(cake) {
-  const images = db
+async function attachMedia(cake) {
+  const images = await db
     .prepare('SELECT * FROM cake_images WHERE cake_id = ? ORDER BY is_primary DESC, sort_order ASC')
     .all(cake.id);
-  const videos = db.prepare('SELECT * FROM cake_videos WHERE cake_id = ? ORDER BY sort_order ASC').all(cake.id);
+  const videos = await db.prepare('SELECT * FROM cake_videos WHERE cake_id = ? ORDER BY sort_order ASC').all(cake.id);
   return {
     ...cake,
     sizes: parseJsonArray(cake.sizes),
@@ -56,7 +44,7 @@ function attachMedia(cake) {
   };
 }
 
-export function listAdminCakes(req, res) {
+export async function listAdminCakes(req, res) {
   const { status } = req.query;
   let query = `
     SELECT c.*, cat.name AS category_name,
@@ -70,25 +58,25 @@ export function listAdminCakes(req, res) {
     params.push(status);
   }
   query += ' ORDER BY c.created_at DESC';
-  const cakes = db.prepare(query).all(...params);
+  const cakes = await db.prepare(query).all(...params);
   res.json({ cakes });
 }
 
-export function getAdminCake(req, res) {
-  const cake = db.prepare('SELECT * FROM cakes WHERE id = ?').get(req.params.id);
+export async function getAdminCake(req, res) {
+  const cake = await db.prepare('SELECT * FROM cakes WHERE id = ?').get(req.params.id);
   if (!cake) return res.status(404).json({ error: 'Cake not found.' });
-  res.json({ cake: attachMedia(cake) });
+  res.json({ cake: await attachMedia(cake) });
 }
 
-export function createCake(req, res) {
+export async function createCake(req, res) {
   const body = req.body;
   if (!body.name) return res.status(400).json({ error: 'Cake name is required.' });
 
   let slug = slugify(body.name);
-  const existing = db.prepare('SELECT id FROM cakes WHERE slug = ?').get(slug);
+  const existing = await db.prepare('SELECT id FROM cakes WHERE slug = ?').get(slug);
   if (existing) slug = `${slug}-${Date.now().toString().slice(-5)}`;
 
-  const info = db
+  const info = await db
     .prepare(
       `INSERT INTO cakes
        (name, slug, category_id, description, base_price, serves, is_customizable, is_featured,
@@ -108,7 +96,7 @@ export function createCake(req, res) {
       is_customizable: body.isCustomizable === 'false' ? 0 : 1,
       is_featured: body.isFeatured === 'true' ? 1 : 0,
       status: body.status === 'published' ? 'published' : 'draft',
-      catalog_number: nextCatalogNumber(),
+      catalog_number: await nextCatalogNumber(),
       flavour: body.flavour || null,
       filling: body.filling || null,
       sizes: JSON.stringify(parseJsonArray(body.sizes)),
@@ -120,40 +108,40 @@ export function createCake(req, res) {
     });
 
   const cakeId = info.lastInsertRowid;
-  saveIncomingFiles(cakeId, req.files);
+  await saveIncomingFiles(cakeId, req.files);
 
-  const cake = db.prepare('SELECT * FROM cakes WHERE id = ?').get(cakeId);
-  res.status(201).json({ cake: attachMedia(cake) });
+  const cake = await db.prepare('SELECT * FROM cakes WHERE id = ?').get(cakeId);
+  res.status(201).json({ cake: await attachMedia(cake) });
 }
 
-function saveIncomingFiles(cakeId, files) {
+async function saveIncomingFiles(cakeId, files) {
   if (!files) return;
 
   if (files.mainImage?.[0]) {
     const f = files.mainImage[0];
-    const url = publicUrlFor('cakes', f.filename);
+    const url = f.url;
     // demote any existing primary
-    db.prepare('UPDATE cake_images SET is_primary = 0 WHERE cake_id = ?').run(cakeId);
-    db.prepare('INSERT INTO cake_images (cake_id, url, is_primary, sort_order) VALUES (?, ?, 1, -1)').run(cakeId, url);
+    await db.prepare('UPDATE cake_images SET is_primary = 0 WHERE cake_id = ?').run(cakeId);
+    await db.prepare('INSERT INTO cake_images (cake_id, url, is_primary, sort_order) VALUES (?, ?, 1, -1)').run(cakeId, url);
   }
 
   if (files.galleryImages?.length) {
     const insert = db.prepare('INSERT INTO cake_images (cake_id, url, is_primary, sort_order) VALUES (?, ?, 0, ?)');
-    files.galleryImages.forEach((f, idx) => {
-      insert.run(cakeId, publicUrlFor('cakes', f.filename), idx);
-    });
+    for (const [idx, f] of files.galleryImages.entries()) {
+      await insert.run(cakeId, f.url, idx);
+    }
   }
 
   if (files.videos?.length) {
     const insert = db.prepare('INSERT INTO cake_videos (cake_id, url, sort_order) VALUES (?, ?, ?)');
-    files.videos.forEach((f, idx) => {
-      insert.run(cakeId, publicUrlFor('cakes', f.filename), idx);
-    });
+    for (const [idx, f] of files.videos.entries()) {
+      await insert.run(cakeId, f.url, idx);
+    }
   }
 }
 
-export function updateCake(req, res) {
-  const cake = db.prepare('SELECT * FROM cakes WHERE id = ?').get(req.params.id);
+export async function updateCake(req, res) {
+  const cake = await db.prepare('SELECT * FROM cakes WHERE id = ?').get(req.params.id);
   if (!cake) return res.status(404).json({ error: 'Cake not found.' });
 
   const body = req.body;
@@ -177,7 +165,7 @@ export function updateCake(req, res) {
     is_available: body.isAvailable !== undefined ? (body.isAvailable === 'false' ? 0 : 1) : cake.is_available,
   };
 
-  db.prepare(
+  await db.prepare(
     `UPDATE cakes SET
       name=@name, category_id=@category_id, description=@description, base_price=@base_price,
       serves=@serves, is_customizable=@is_customizable, is_featured=@is_featured, status=@status,
@@ -187,57 +175,58 @@ export function updateCake(req, res) {
      WHERE id=@id`
   ).run({ ...updated, id: cake.id });
 
-  saveIncomingFiles(cake.id, req.files);
+  await saveIncomingFiles(cake.id, req.files);
 
-  const fresh = db.prepare('SELECT * FROM cakes WHERE id = ?').get(cake.id);
-  res.json({ cake: attachMedia(fresh) });
+  const fresh = await db.prepare('SELECT * FROM cakes WHERE id = ?').get(cake.id);
+  res.json({ cake: await attachMedia(fresh) });
 }
 
-export function setCakeStatus(req, res) {
+export async function setCakeStatus(req, res) {
   const { status } = req.body; // draft | published | archived
   if (!['draft', 'published', 'archived'].includes(status)) {
     return res.status(400).json({ error: 'Invalid status.' });
   }
-  const cake = db.prepare('SELECT * FROM cakes WHERE id = ?').get(req.params.id);
+  const cake = await db.prepare('SELECT * FROM cakes WHERE id = ?').get(req.params.id);
   if (!cake) return res.status(404).json({ error: 'Cake not found.' });
 
-  db.prepare("UPDATE cakes SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, cake.id);
+  await db.prepare("UPDATE cakes SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, cake.id);
   res.json({ message: `Cake marked as ${status}.` });
 }
 
-export function deleteCake(req, res) {
-  const cake = db.prepare('SELECT * FROM cakes WHERE id = ?').get(req.params.id);
+export async function deleteCake(req, res) {
+  const cake = await db.prepare('SELECT * FROM cakes WHERE id = ?').get(req.params.id);
   if (!cake) return res.status(404).json({ error: 'Cake not found.' });
 
-  const images = db.prepare('SELECT url FROM cake_images WHERE cake_id = ?').all(cake.id);
-  const videos = db.prepare('SELECT url FROM cake_videos WHERE cake_id = ?').all(cake.id);
-  images.forEach((i) => unlinkQuiet(i.url));
-  videos.forEach((v) => unlinkQuiet(v.url));
+  const images = await db.prepare('SELECT url FROM cake_images WHERE cake_id = ?').all(cake.id);
+  const videos = await db.prepare('SELECT url FROM cake_videos WHERE cake_id = ?').all(cake.id);
+  await Promise.all([...images, ...videos].map((m) => removeStoredFile(m.url)));
 
-  db.prepare('DELETE FROM cakes WHERE id = ?').run(cake.id); // cascades images/videos
+  await db.prepare('DELETE FROM cake_images WHERE cake_id = ?').run(cake.id);
+  await db.prepare('DELETE FROM cake_videos WHERE cake_id = ?').run(cake.id);
+  await db.prepare('DELETE FROM cakes WHERE id = ?').run(cake.id);
   res.json({ message: 'Cake deleted.' });
 }
 
-export function deleteCakeImage(req, res) {
-  const image = db.prepare('SELECT * FROM cake_images WHERE id = ? AND cake_id = ?').get(req.params.imageId, req.params.id);
+export async function deleteCakeImage(req, res) {
+  const image = await db.prepare('SELECT * FROM cake_images WHERE id = ? AND cake_id = ?').get(req.params.imageId, req.params.id);
   if (!image) return res.status(404).json({ error: 'Image not found.' });
-  unlinkQuiet(image.url);
-  db.prepare('DELETE FROM cake_images WHERE id = ?').run(image.id);
+  await removeStoredFile(image.url);
+  await db.prepare('DELETE FROM cake_images WHERE id = ?').run(image.id);
   res.json({ message: 'Image removed.' });
 }
 
-export function deleteCakeVideo(req, res) {
-  const video = db.prepare('SELECT * FROM cake_videos WHERE id = ? AND cake_id = ?').get(req.params.videoId, req.params.id);
+export async function deleteCakeVideo(req, res) {
+  const video = await db.prepare('SELECT * FROM cake_videos WHERE id = ? AND cake_id = ?').get(req.params.videoId, req.params.id);
   if (!video) return res.status(404).json({ error: 'Video not found.' });
-  unlinkQuiet(video.url);
-  db.prepare('DELETE FROM cake_videos WHERE id = ?').run(video.id);
+  await removeStoredFile(video.url);
+  await db.prepare('DELETE FROM cake_videos WHERE id = ?').run(video.id);
   res.json({ message: 'Video removed.' });
 }
 
-export function setPrimaryImage(req, res) {
-  const image = db.prepare('SELECT * FROM cake_images WHERE id = ? AND cake_id = ?').get(req.params.imageId, req.params.id);
+export async function setPrimaryImage(req, res) {
+  const image = await db.prepare('SELECT * FROM cake_images WHERE id = ? AND cake_id = ?').get(req.params.imageId, req.params.id);
   if (!image) return res.status(404).json({ error: 'Image not found.' });
-  db.prepare('UPDATE cake_images SET is_primary = 0 WHERE cake_id = ?').run(req.params.id);
-  db.prepare('UPDATE cake_images SET is_primary = 1 WHERE id = ?').run(image.id);
+  await db.prepare('UPDATE cake_images SET is_primary = 0 WHERE cake_id = ?').run(req.params.id);
+  await db.prepare('UPDATE cake_images SET is_primary = 1 WHERE id = ?').run(image.id);
   res.json({ message: 'Primary image updated.' });
 }

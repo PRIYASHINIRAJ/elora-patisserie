@@ -11,7 +11,7 @@ function parseJsonArray(value) {
   }
 }
 
-export function listCakes(req, res) {
+export async function listCakes(req, res) {
   const { category, featured } = req.query;
 
   let query = `
@@ -32,7 +32,7 @@ export function listCakes(req, res) {
   }
   query += ' ORDER BY c.created_at DESC';
 
-  const cakes = db.prepare(query).all(...params).map((c) => ({
+  const cakes = (await db.prepare(query).all(...params)).map((c) => ({
     ...c,
     tags: parseJsonArray(c.tags),
     colours: parseJsonArray(c.colours),
@@ -40,8 +40,8 @@ export function listCakes(req, res) {
   res.json({ cakes });
 }
 
-export function getCakeBySlug(req, res) {
-  const cake = db
+export async function getCakeBySlug(req, res) {
+  const cake = await db
     .prepare(
       `SELECT c.*, cat.name AS category_name, cat.slug AS category_slug
        FROM cakes c
@@ -52,10 +52,10 @@ export function getCakeBySlug(req, res) {
 
   if (!cake) return res.status(404).json({ error: 'Cake not found.' });
 
-  const images = db
+  const images = await db
     .prepare('SELECT * FROM cake_images WHERE cake_id = ? ORDER BY is_primary DESC, sort_order ASC')
     .all(cake.id);
-  const videos = db.prepare('SELECT * FROM cake_videos WHERE cake_id = ? ORDER BY sort_order ASC').all(cake.id);
+  const videos = await db.prepare('SELECT * FROM cake_videos WHERE cake_id = ? ORDER BY sort_order ASC').all(cake.id);
 
   res.json({
     cake: {
@@ -71,7 +71,7 @@ export function getCakeBySlug(req, res) {
   });
 }
 
-export function listCategories(req, res) {
-  const categories = db.prepare('SELECT * FROM categories ORDER BY name ASC').all();
+export async function listCategories(req, res) {
+  const categories = await db.prepare('SELECT * FROM categories ORDER BY name ASC').all();
   res.json({ categories });
 }
