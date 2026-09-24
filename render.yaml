@@ -1,0 +1,47 @@
+# Render Blueprint for the Élora Patisserie API (server/ folder).
+# Render → New → Blueprint → pick this repo. It reads this file.
+services:
+  - type: web
+    name: elora-patisserie-api
+    runtime: node
+    rootDir: server
+    # A persistent disk (needed to keep the SQLite database and uploaded
+    # photos) is only available on paid plans; "starter" is the cheapest.
+    plan: starter
+    region: singapore
+    buildCommand: npm install
+    # seed.js is safe to re-run: it only creates the admin and sample cakes if missing.
+    startCommand: node database/seed.js && node server.js
+    healthCheckPath: /api/health
+    disk:
+      name: elora-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /var/data/elora.sqlite
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: DELIVERY_FEE
+        value: "25"
+      # Filled in on the Render dashboard (you'll be asked when creating it).
+      - key: CLIENT_URL
+        sync: false
+      - key: ADMIN_SEED_EMAIL
+        sync: false
+      - key: ADMIN_SEED_PASSWORD
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false

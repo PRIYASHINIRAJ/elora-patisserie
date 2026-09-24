@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.*
+*.bak
+!.env.example
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+uploads/*
+!uploads/.gitkeep
+
+.vercel
+.claude

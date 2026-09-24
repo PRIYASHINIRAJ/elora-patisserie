@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700&display=swap');
+
+@theme {
+  --font-display: "Cormorant Garamond", serif;
+  --font-body: "Manrope", sans-serif;
+
+  --color-ivory: #FAF6EE;
+  --color-champagne: #EFE1C6;
+  --color-cream: #F3ECDD;
+  --color-espresso: #2B2019;
+  --color-gold: #B08A4E;
+  --color-gold-light: #D9C08F;
+  --color-dusty-rose: #C9A79A;
+  --color-mocha: #6B4C3B;
+  --color-beige: #E7DCC7;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ivory);
+  color: var(--color-espresso);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+
+.tracking-wide-cap {
+  letter-spacing: 0.18em;
+}
+
+::selection {
+  background: var(--color-gold-light);
+  color: var(--color-espresso);
+}
+
+/* Visible focus ring for keyboard navigation — never remove focus outlines
+   without replacing them with something equally visible. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom cursor: hide the native cursor only on desktop-class pointers,
+   so touch/mobile devices keep normal behavior untouched. */
+@media (hover: hover) and (pointer: fine) {
+  .cursor-none-desktop,
+  .cursor-none-desktop * {
+    cursor: none !important;
+  }
+}
