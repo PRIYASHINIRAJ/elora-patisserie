@@ -5,27 +5,23 @@ services:
     name: elora-patisserie-api
     runtime: node
     rootDir: server
-    # A persistent disk (needed to keep the SQLite database and uploaded
-    # photos) is only available on paid plans; "starter" is the cheapest.
-    plan: starter
+    # Free plan: no persistent disk, so the SQLite database and uploaded files
+    # reset whenever the service restarts, sleeps, or redeploys. The sample
+    # cakes/portfolio are re-created on every start by seed.js.
+    # To keep data permanently, switch to `plan: starter` and add:
+    #   disk: { name: elora-data, mountPath: /var/data, sizeGB: 1 }
+    # plus env vars DB_PATH=/var/data/elora.sqlite and UPLOADS_DIR=/var/data/uploads
+    plan: free
     region: singapore
     buildCommand: npm install
     # seed.js is safe to re-run: it only creates the admin and sample cakes if missing.
     startCommand: node database/seed.js && node server.js
     healthCheckPath: /api/health
-    disk:
-      name: elora-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: "22"
       - key: NODE_ENV
         value: production
-      - key: DB_PATH
-        value: /var/data/elora.sqlite
-      - key: UPLOADS_DIR
-        value: /var/data/uploads
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
