@@ -1,56 +1,25 @@
-import axios from 'axios';
-import { upload } from '@vercel/blob/client';
+import axios, { AxiosError } from 'axios';
 
-// Production (Vercel): the site and API share a domain, so the API is at /api.
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api');
+// The whole API runs in the browser (src/backend) — there is no server to call.
+// This adapter hands each request to it instead of sending it over the network.
+async function browserAdapter(config) {
+  const { handleRequest } = await import('../backend/app.js');
+  const url = api.getUri(config).replace(/^\/api/, '') || '/';
+  const { status, data } = await handleRequest({ method: config.method || 'get', path: url, data: config.data });
+  const response = { data, status, statusText: String(status), headers: {}, config, request: {} };
+  if (status >= 200 && status < 300) return response;
+  throw new AxiosError(
+    data?.error || `Request failed with status code ${status}`,
+    status >= 500 ? AxiosError.ERR_BAD_RESPONSE : AxiosError.ERR_BAD_REQUEST,
+    config,
+    null,
+    response
+  );
+}
 
 const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true,
+  baseURL: '/api',
+  adapter: browserAdapter,
 });
-
-// Vercel caps a request to the API at 4.5 MB, too small for cake videos. So in
-// production each file is uploaded straight from the browser to Vercel Blob,
-// and the API receives a small JSON descriptor (url/type/name/size) in its place.
-const DIRECT_UPLOADS = import.meta.env.PROD && import.meta.env.VITE_DIRECT_UPLOADS !== 'false';
-
-async function uploadFilesToBlob(formData) {
-  const entries = [...formData.entries()];
-  const resolved = await Promise.all(
-    entries.map(async ([key, value]) => {
-      if (!(value instanceof Blob)) return [key, value];
-      const name = value.name || 'upload';
-      const blob = await upload(`elora/${name}`, value, {
-        access: 'public',
-        handleUploadUrl: `${API_URL}/uploads/blob`,
-        contentType: value.type || undefined,
-      });
-      const descriptor = { url: blob.url, contentType: blob.contentType || value.type, name, size: value.size };
-      return [key, JSON.stringify(descriptor)];
-    })
-  );
-  const next = new FormData();
-  resolved.forEach(([key, value]) => next.append(key, value));
-  return next;
-}
-
-// Only when the server has Blob storage configured (it isn't when running locally).
-let blobEnabled;
-function isBlobEnabled() {
-  blobEnabled ??= axios
-    .get(`${API_URL}/uploads/blob`)
-    .then((r) => Boolean(r.data?.enabled))
-    .catch(() => false);
-  return blobEnabled;
-}
-
-if (DIRECT_UPLOADS) {
-  api.interceptors.request.use(async (config) => {
-    if (config.data instanceof FormData && (await isBlobEnabled())) {
-      config.data = await uploadFilesToBlob(config.data);
-    }
-    return config;
-  });
-}
 
 export default api;

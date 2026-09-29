@@ -1,19 +1,15 @@
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'url'
 import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  server: {
-    // Uploaded images/videos are stored and served by the API as relative
-    // `/uploads/...` URLs. Without this proxy, the dev server (port 5173)
-    // would try to resolve them itself and silently fall back to serving
-    // index.html instead of the actual file.
-    proxy: {
-      '/uploads': {
-        target: 'http://localhost:4000',
-        changeOrigin: true,
-      },
+  resolve: {
+    alias: {
+      // The in-browser API (src/backend) uses Express-style route files;
+      // this small router stands in for Express.
+      express: fileURLToPath(new URL('./src/backend/express.js', import.meta.url)),
     },
   },
 })

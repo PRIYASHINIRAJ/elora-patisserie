@@ -300,32 +300,33 @@ elora-patisserie/
 └── server/     Node + Express + SQLite backend
 ```
 
+## How it works (website-only, like a static site)
+
+The whole app runs in the visitor's browser — there is no server or database to host.
+`client/src/backend/` holds the API (the same routes and controllers as `server/`) and
+answers the site's requests in the browser. Data is an SQLite database (sql.js) that
+starts from `client/public/data/elora-initial.sqlite` and is saved in the browser
+(IndexedDB) after every change; uploaded photos/videos are stored there too.
+
+Because data lives in each browser, changes made in one browser (admin edits, orders,
+messages) are only visible in that browser. Online card payment is not available.
+
 ## Running it locally
 
-The website and the API run together as **one app** on one port.
-
 ```bash
-npm install                      # API dependencies (project root)
-npm --prefix client install      # website dependencies
-npm start                        # builds the site, then serves everything at http://localhost:4000
+cd client
+npm install
+npm run dev    # http://localhost:5173
 ```
 
-The admin account and sample cakes are created automatically on first start.
-Data is stored in `server/database/elora.sqlite`; uploads go to `server/uploads/`.
+## Deploying to Vercel
 
-For live-reload while editing the website, run `npm --prefix server run dev` and
-`npm --prefix client run dev` in two terminals and open http://localhost:5173.
+Vercel project settings: **Root Directory = `client`**, **Framework = Vite**. Nothing else
+is needed — no environment variables, database or storage. `client/vercel.json` sends every
+page URL to `index.html` so refreshing any page works.
 
-## Deploying (Vercel only)
-
-One Vercel project serves both: the site from `client/dist`, and the Express API as a
-Vercel Function (`api/index.js`, see `vercel.json`). It needs:
-
-- **Database:** a Turso (hosted SQLite) database, free Starter plan via Vercel Marketplace,
-  which provides `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
-- **Photos/videos:** a Vercel Blob store, which provides `BLOB_READ_WRITE_TOKEN`.
-- **Env vars:** `JWT_SECRET`, `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD` (plus the optional Stripe keys).
-- **Project settings:** Root Directory = repository root; build settings come from `vercel.json`.
+The `server/` folder is the original Node/Express backend, kept for reference; the
+deployed site does not use it.
 
 ### Default accounts
 
