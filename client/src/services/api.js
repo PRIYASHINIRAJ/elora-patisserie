@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { upload } from '@vercel/blob/client';
 
-// Production (Vercel): the site and API share a domain, so the API is at /api.
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api');
+// Production (Vercel): the site and API share a domain, so the API is always /api.
+// VITE_API_URL only applies to local development.
+const API_URL = import.meta.env.PROD ? '/api' : import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const api = axios.create({
   baseURL: API_URL,

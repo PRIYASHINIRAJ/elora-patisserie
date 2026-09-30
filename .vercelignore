@@ -1,0 +1,9 @@
+# Local-only files: never upload them when deploying with the Vercel CLI.
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+server/database/*.sqlite*
+server/uploads
+.agents
+.claude
