@@ -7,21 +7,21 @@ export default function MeetTheBaker({ settings }) {
   const bio = settings?.baker_bio;
   const photo = settings?.baker_photo_url;
 
-  // Nothing to show yet — admin hasn't filled this section in. Never render
-  // a half-empty "Meet the Baker" section with placeholder text.
-  if (!name || !photo) return null;
+  // Nothing to show yet — admin hasn't filled this section in.
+  if (!name && !photo) return null;
 
   return (
-    <section className="relative bg-cream overflow-hidden py-28">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+    <section className="relative bg-cream overflow-hidden py-20">
+      <div className={`max-w-5xl mx-auto px-6 lg:px-10 grid grid-cols-1 gap-10 lg:gap-14 items-center ${photo ? 'md:grid-cols-[2fr_3fr]' : ''}`}>
         {/* Photo, with a clip-path reveal and a rotated frame accent behind it */}
-        <div className="relative order-2 lg:order-1">
+        {photo && (
+        <div className="relative w-full max-w-[280px] md:max-w-[320px] mx-auto">
           <motion.div
             initial={{ opacity: 0, rotate: -2, x: -24 }}
             whileInView={{ opacity: 1, rotate: -2, x: 0 }}
             viewport={{ once: true, margin: '-100px' }}
             transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-            className="absolute inset-0 border border-gold/40 translate-x-5 translate-y-5"
+            className="absolute inset-0 border border-gold/40 translate-x-3 translate-y-3"
             aria-hidden="true"
           />
           <motion.div
@@ -42,9 +42,10 @@ export default function MeetTheBaker({ settings }) {
             />
           </motion.div>
         </div>
+        )}
 
         {/* Text */}
-        <div className="order-1 lg:order-2">
+        <div className={photo ? '' : 'text-center max-w-2xl mx-auto'}>
           <motion.p
             initial={{ opacity: 0, y: 14 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -60,9 +61,9 @@ export default function MeetTheBaker({ settings }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="font-display text-5xl lg:text-6xl mb-2"
+            className="font-display text-4xl lg:text-5xl mb-2"
           >
-            {name}
+            {name || 'Our Founder'}
           </motion.h2>
 
           {title && (
@@ -83,7 +84,7 @@ export default function MeetTheBaker({ settings }) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-80px' }}
               transition={{ duration: 0.7, delay: 0.3 }}
-              className="relative pl-8"
+              className={`relative pl-8 ${photo ? '' : 'text-left inline-block'}`}
             >
               <Quote className="absolute left-0 top-0 text-gold/30" size={28} aria-hidden="true" />
               <p className="text-espresso/70 leading-relaxed max-w-md whitespace-pre-line">{bio}</p>

@@ -60,7 +60,12 @@ export default function AdminSettings() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const d = await settingsService.update(values);
+    // Photos are saved by their own upload buttons; re-sending the URLs shown in
+    // this form could overwrite them with a stale or temporary link.
+    const fields = { ...values };
+    delete fields.logo_url;
+    delete fields.baker_photo_url;
+    const d = await settingsService.update(fields);
     setValues(d.settings);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

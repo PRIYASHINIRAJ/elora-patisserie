@@ -54,9 +54,6 @@ export default function Home() {
     <div>
       <Hero />
 
-      {/* Meet the Baker */}
-      <MeetTheBaker settings={settings} />
-
       {/* Studio Reels (TikTok-style videos, admin-managed) */}
       <StudioReels videos={studioVideos} tiktokHandle={settings?.tiktok_handle} />
 
@@ -235,6 +232,9 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* Meet the Baker */}
+      <MeetTheBaker settings={settings} />
 
       {/* 10. Testimonials */}
       <Testimonials />
