@@ -8,15 +8,15 @@ export default function OurStory() {
   return (
     <div>
       <section className="bg-espresso text-champagne">
-        <div className="max-w-4xl mx-auto px-6 lg:px-10 py-28 text-center">
+        <div className="max-w-4xl mx-auto px-6 lg:px-10 py-20 lg:py-24 text-center">
           <p className="text-xs tracking-wide-cap uppercase text-gold-light mb-6">Our Story</p>
-          <h1 className="font-display text-5xl lg:text-6xl leading-tight">
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl leading-tight">
             Every cake begins as a conversation, not a catalogue.
           </h1>
         </div>
       </section>
 
-      <section className="max-w-3xl mx-auto px-6 lg:px-10 py-24 space-y-8 text-espresso/80 leading-relaxed text-lg">
+      <section className="max-w-3xl mx-auto px-6 lg:px-10 py-16 lg:py-20 space-y-8 text-espresso/80 leading-relaxed text-lg">
         <p>
           Élora Patisserie was founded in Kuala Lumpur on a simple belief: a cake for a
           milestone occasion deserves the same care as a couture gown or a bespoke suit —

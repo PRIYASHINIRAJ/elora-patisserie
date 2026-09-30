@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { cakeService } from '../services/cakeService';
+import CakeCard, { CakeCardSkeleton } from '../components/CakeCard';
 import { usePageMeta } from '../hooks/usePageMeta';
 
 export default function Collection() {
@@ -33,21 +34,22 @@ export default function Collection() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-16 pb-24">
-      <div className="mb-14 max-w-2xl">
+    <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-14 lg:pt-16 pb-24">
+      <div className="mb-10 lg:mb-12 max-w-2xl">
         <p className="text-xs tracking-wide-cap uppercase text-gold mb-3">The Collection</p>
-        <h1 className="font-display text-5xl lg:text-6xl mb-4">Every cake, catalogued.</h1>
-        <p className="text-espresso/60 leading-relaxed">
+        <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl mb-4">Every cake, catalogued.</h1>
+        <p className="text-espresso/70 leading-relaxed">
           Each piece is built to order in our Kuala Lumpur atelier. Browse by occasion, or
           start from any of these as a base for something fully custom.
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-12">
+      <div className="flex flex-wrap gap-2 sm:gap-3 mb-10 lg:mb-12 pb-6 border-b border-espresso/10" role="group" aria-label="Filter by occasion">
         <button
           onClick={() => setCategory('')}
-          className={`px-4 py-2 text-[11px] tracking-wide-cap uppercase border ${
-            !activeCategory ? 'bg-espresso text-champagne border-espresso' : 'border-espresso/20 text-espresso/70'
+          aria-pressed={!activeCategory}
+          className={`px-4 py-2.5 text-[11px] tracking-wide-cap uppercase border transition-colors ${
+            !activeCategory ? 'bg-espresso text-champagne border-espresso' : 'border-espresso/20 text-espresso/70 hover:border-espresso/50 hover:text-espresso'
           }`}
         >
           All
@@ -56,8 +58,9 @@ export default function Collection() {
           <button
             key={c.id}
             onClick={() => setCategory(c.slug)}
-            className={`px-4 py-2 text-[11px] tracking-wide-cap uppercase border ${
-              activeCategory === c.slug ? 'bg-espresso text-champagne border-espresso' : 'border-espresso/20 text-espresso/70'
+            aria-pressed={activeCategory === c.slug}
+          className={`px-4 py-2.5 text-[11px] tracking-wide-cap uppercase border transition-colors ${
+              activeCategory === c.slug ? 'bg-espresso text-champagne border-espresso' : 'border-espresso/20 text-espresso/70 hover:border-espresso/50 hover:text-espresso'
             }`}
           >
             {c.name}
@@ -66,25 +69,21 @@ export default function Collection() {
       </div>
 
       {loading ? (
-        <p className="text-espresso/50 text-sm">Loading…</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+          {Array.from({ length: 6 }, (_, i) => <CakeCardSkeleton key={i} />)}
+        </div>
       ) : cakes.length === 0 ? (
-        <p className="text-espresso/50 text-sm">No cakes in this category yet.</p>
+        <div className="py-20 text-center">
+          <p className="font-display text-2xl mb-2">No cakes here yet</p>
+          <p className="text-sm text-espresso/60 mb-6">Try another occasion, or tell us what you have in mind.</p>
+          <Link to="/custom-cake" className="inline-block border border-espresso/30 px-6 py-3 text-xs tracking-wide-cap uppercase hover:border-espresso">
+            Start a Custom Request
+          </Link>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
-          {cakes.map((cake) => (
-            <Link key={cake.id} to={`/cake/${cake.slug}`} data-cursor="explore" className="group block">
-              <div className="aspect-[4/5] overflow-hidden bg-beige mb-5">
-                <img
-                  src={cake.image_url}
-                  alt={cake.name}
-                  loading="lazy"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-              </div>
-              <p className="text-[11px] tracking-wide-cap uppercase text-gold mb-2">{cake.catalog_number}</p>
-              <h3 className="font-display text-2xl mb-1">{cake.name}</h3>
-              <p className="text-sm text-espresso/60">From RM {cake.base_price.toFixed(0)} · {cake.serves}</p>
-            </Link>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+          {cakes.map((cake, i) => (
+            <CakeCard key={cake.id} cake={cake} index={i} />
           ))}
         </div>
       )}

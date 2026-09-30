@@ -121,7 +121,7 @@ export async function seed() {
     const placeholderImages = {
       'noir-champagne': 'https://images.unsplash.com/photo-1535141192574-5d4897c12636?q=80&w=1200',
       'rose-mocha-etude': 'https://images.unsplash.com/photo-1621303837174-89787a7d4729?q=80&w=1200',
-      'ivory-camelia': 'https://images.unsplash.com/photo-1622896972648-eb1c9028e0bf?q=80&w=1200',
+      'ivory-camelia': 'https://images.unsplash.com/photo-1562440499-64c9a111f713?q=80&w=1200',
       'velours-rouge': 'https://images.unsplash.com/photo-1586985289906-406988974504?q=80&w=1200',
       'atelier-birthday': 'https://images.unsplash.com/photo-1571115177098-24ec42ed204d?q=80&w=1200',
       'maison-gold-corporate': 'https://images.unsplash.com/photo-1607478900766-efe13248b125?q=80&w=1200',
@@ -149,7 +149,7 @@ export async function seed() {
         tags: JSON.stringify(['wedding', 'gold leaf', 'five-tier']),
         portfolio_type: 'portfolio_only',
         featured: 1,
-        image: 'https://images.unsplash.com/photo-1622896972648-eb1c9028e0bf?q=80&w=1200',
+        image: 'https://images.unsplash.com/photo-1562440499-64c9a111f713?q=80&w=1200',
       },
       {
         title: "Emerald Anniversary Sculpture",

@@ -81,10 +81,10 @@ export async function createCake(req, res) {
       `INSERT INTO cakes
        (name, slug, category_id, description, base_price, serves, is_customizable, is_featured,
         status, catalog_number, flavour, filling, sizes, ingredients, colours, customization_options,
-        tags, is_available)
+        tags, is_available, in_portfolio)
        VALUES (@name, @slug, @category_id, @description, @base_price, @serves, @is_customizable, @is_featured,
         @status, @catalog_number, @flavour, @filling, @sizes, @ingredients, @colours, @customization_options,
-        @tags, @is_available)`
+        @tags, @is_available, @in_portfolio)`
     )
     .run({
       name: body.name,
@@ -105,6 +105,7 @@ export async function createCake(req, res) {
       customization_options: JSON.stringify(parseJsonArray(body.customizationOptions)),
       tags: JSON.stringify(parseJsonArray(body.tags)),
       is_available: body.isAvailable === 'false' ? 0 : 1,
+      in_portfolio: body.inPortfolio === 'true' ? 1 : 0,
     });
 
   const cakeId = info.lastInsertRowid;
@@ -163,6 +164,7 @@ export async function updateCake(req, res) {
       body.customizationOptions !== undefined ? JSON.stringify(parseJsonArray(body.customizationOptions)) : cake.customization_options,
     tags: body.tags !== undefined ? JSON.stringify(parseJsonArray(body.tags)) : cake.tags,
     is_available: body.isAvailable !== undefined ? (body.isAvailable === 'false' ? 0 : 1) : cake.is_available,
+    in_portfolio: body.inPortfolio !== undefined ? (body.inPortfolio === 'true' ? 1 : 0) : cake.in_portfolio,
   };
 
   await db.prepare(
@@ -170,7 +172,7 @@ export async function updateCake(req, res) {
       name=@name, category_id=@category_id, description=@description, base_price=@base_price,
       serves=@serves, is_customizable=@is_customizable, is_featured=@is_featured, status=@status,
       flavour=@flavour, filling=@filling, sizes=@sizes, ingredients=@ingredients, colours=@colours,
-      customization_options=@customization_options, tags=@tags, is_available=@is_available,
+      customization_options=@customization_options, tags=@tags, is_available=@is_available, in_portfolio=@in_portfolio,
       updated_at = datetime('now')
      WHERE id=@id`
   ).run({ ...updated, id: cake.id });

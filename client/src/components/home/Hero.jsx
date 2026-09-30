@@ -39,7 +39,7 @@ export default function Hero() {
   const overlayOpacity = useTransform(
     scrollYProgress,
     [0, 1],
-    [0.45, 0.75]
+    [0.25, 0.6]
   );
 
   const contentOpacity = useTransform(
@@ -57,7 +57,7 @@ export default function Hero() {
   return (
     <section
       ref={ref}
-      className="relative h-screen overflow-hidden bg-espresso"
+      className="relative h-[100svh] min-h-[560px] overflow-hidden bg-espresso"
     >
       {/* Hero Video */}
       <motion.div
@@ -78,10 +78,15 @@ export default function Hero() {
         />
       </motion.div>
 
-      {/* Dark overlay */}
+      {/* Dark overlay + a left-side gradient so the text stays readable
+          while the cake remains visible on the right */}
       <motion.div
         style={{ opacity: overlayOpacity }}
         className="absolute inset-0 bg-espresso"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-gradient-to-t from-espresso/90 via-espresso/40 to-espresso/10 md:bg-gradient-to-r md:from-espresso/90 md:via-espresso/55 md:to-transparent"
       />
 
       {/* Floating particles */}
@@ -118,7 +123,7 @@ export default function Hero() {
           opacity: contentOpacity,
           y: contentY,
         }}
-        className="relative h-full flex flex-col items-center justify-center text-center px-6"
+        className="relative h-full max-w-6xl mx-auto px-6 lg:px-10 flex flex-col justify-end md:justify-center pb-28 md:pb-0"
       >
         {/* Location */}
         <motion.p
@@ -128,14 +133,14 @@ export default function Hero() {
             duration: 0.8,
             delay: 0.2,
           }}
-          className="text-[11px] tracking-[0.3em] uppercase text-gold-light mb-6"
+          className="text-[11px] tracking-[0.3em] uppercase text-gold-light mb-5"
         >
           Kuala Lumpur Atelier
         </motion.p>
 
         {/* Main Heading */}
-        <h1 className="font-display text-champagne leading-[0.95]">
-          {['SWEET', 'MOMENTS,', 'BEAUTIFULLY', 'MADE.'].map(
+        <h1 className="font-display text-champagne leading-[1.02] max-w-xl">
+          {['Sweet moments,', 'beautifully made.'].map(
             (word, i) => (
               <span
                 key={word}
@@ -149,7 +154,7 @@ export default function Hero() {
                     delay: 0.3 + i * 0.12,
                     ease: [0.22, 1, 0.36, 1],
                   }}
-                  className="block text-[12vw] sm:text-7xl lg:text-8xl"
+                  className={`block text-5xl sm:text-6xl lg:text-7xl ${i === 1 ? 'italic text-gold-light' : ''}`}
                 >
                   {word}
                 </motion.span>
@@ -166,7 +171,7 @@ export default function Hero() {
             duration: 0.8,
             delay: 0.95,
           }}
-          className="mt-8 max-w-md text-champagne/75 text-base leading-relaxed"
+          className="mt-6 max-w-md text-champagne/85 text-base sm:text-lg leading-relaxed"
         >
           Artisanal cakes crafted for celebrations that deserve
           something extraordinary.
@@ -180,14 +185,14 @@ export default function Hero() {
             duration: 0.8,
             delay: 1.1,
           }}
-          className="mt-10 flex flex-col sm:flex-row gap-4"
+          className="mt-9 flex flex-col sm:flex-row gap-3 sm:gap-4"
         >
           {/* Collection Button */}
           <MagneticButton className="inline-block">
             <Link
               to="/collection"
               data-cursor="button"
-              className="block px-8 py-3.5 text-xs tracking-wide-cap uppercase bg-champagne text-espresso hover:bg-gold-light transition-colors"
+              className="block text-center px-8 py-4 text-xs tracking-wide-cap uppercase bg-champagne text-espresso hover:bg-gold-light transition-colors"
             >
               Discover the Collection
             </Link>
@@ -198,7 +203,7 @@ export default function Hero() {
             <Link
               to="/custom-cake"
               data-cursor="button"
-              className="block px-8 py-3.5 text-xs tracking-wide-cap uppercase border border-champagne/50 text-champagne hover:bg-champagne/10 transition-colors"
+              className="block text-center px-8 py-4 text-xs tracking-wide-cap uppercase border border-champagne/50 text-champagne hover:bg-champagne/10 transition-colors"
             >
               Create Your Cake
             </Link>
@@ -214,7 +219,7 @@ export default function Hero() {
           delay: 1.6,
           duration: 0.8,
         }}
-        className="absolute bottom-8 inset-x-0 flex flex-col items-center text-champagne/60"
+        className="absolute bottom-8 inset-x-0 hidden md:flex flex-col items-center text-champagne/60"
       >
         <span className="text-[10px] tracking-wide-cap uppercase mb-2">
           Scroll

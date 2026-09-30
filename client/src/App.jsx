@@ -35,8 +35,6 @@ const AdminDashboard = lazy(() => import('./admin/AdminDashboard'));
 const AdminCustomRequests = lazy(() => import('./admin/AdminCustomRequests'));
 const AdminCakes = lazy(() => import('./admin/AdminCakes'));
 const AdminCakeForm = lazy(() => import('./admin/AdminCakeForm'));
-const AdminPortfolio = lazy(() => import('./admin/AdminPortfolio'));
-const AdminPortfolioForm = lazy(() => import('./admin/AdminPortfolioForm'));
 const AdminMedia = lazy(() => import('./admin/AdminMedia'));
 const AdminStudioVideos = lazy(() => import('./admin/AdminStudioVideos'));
 const AdminMessages = lazy(() => import('./admin/AdminMessages'));
@@ -97,9 +95,6 @@ export default function App() {
               <Route path="cakes" element={<AdminCakes />} />
               <Route path="cakes/new" element={<AdminCakeForm />} />
               <Route path="cakes/:id/edit" element={<AdminCakeForm />} />
-              <Route path="portfolio" element={<AdminPortfolio />} />
-              <Route path="portfolio/new" element={<AdminPortfolioForm />} />
-              <Route path="portfolio/:id/edit" element={<AdminPortfolioForm />} />
               <Route path="media" element={<AdminMedia />} />
               <Route path="studio-videos" element={<AdminStudioVideos />} />
               <Route path="orders" element={<AdminOrders />} />

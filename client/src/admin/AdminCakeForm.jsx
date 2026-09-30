@@ -19,6 +19,7 @@ const emptyForm = {
   isCustomizable: true,
   isFeatured: false,
   isAvailable: true,
+  inPortfolio: false,
 };
 
 export default function AdminCakeForm() {
@@ -59,6 +60,7 @@ export default function AdminCakeForm() {
         isCustomizable: !!cake.is_customizable,
         isFeatured: !!cake.is_featured,
         isAvailable: !!cake.is_available,
+        inPortfolio: !!cake.in_portfolio,
       });
       setSizes(cake.sizes.length ? cake.sizes : []);
       setExistingImages(cake.images);
@@ -92,6 +94,7 @@ export default function AdminCakeForm() {
     isCustomizable: form.isCustomizable,
     isFeatured: form.isFeatured,
     isAvailable: form.isAvailable,
+    inPortfolio: form.inPortfolio,
     status,
   });
 
@@ -239,6 +242,9 @@ export default function AdminCakeForm() {
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.isAvailable} onChange={setCheck('isAvailable')} /> Available
+          </label>
+          <label className="flex items-center gap-2 text-sm" title="Also show this cake on the public Portfolio page">
+            <input type="checkbox" checked={form.inPortfolio} onChange={setCheck('inPortfolio')} /> Show in Portfolio
           </label>
         </section>
 

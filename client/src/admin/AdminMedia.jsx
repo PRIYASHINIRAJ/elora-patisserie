@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { UploadCloud, Trash2, Link2 } from 'lucide-react';
 import { mediaService } from '../services/mediaService';
 import { adminCakeService } from '../services/adminCakeService';
-import { adminPortfolioService } from '../services/adminPortfolioService';
 
 export default function AdminMedia() {
   const [items, setItems] = useState(null);
@@ -11,7 +10,6 @@ export default function AdminMedia() {
   const [error, setError] = useState('');
   const [attachTarget, setAttachTarget] = useState(null); // media item being attached
   const [cakes, setCakes] = useState([]);
-  const [portfolioItems, setPortfolioItems] = useState([]);
   const fileInputRef = useRef(null);
 
   const load = () => {
@@ -22,7 +20,6 @@ export default function AdminMedia() {
 
   useEffect(() => {
     adminCakeService.list({}).then((d) => setCakes(d.cakes)).catch(() => {});
-    adminPortfolioService.list().then((d) => setPortfolioItems(d.items)).catch(() => {});
   }, []);
 
   const handleUpload = async (e) => {
@@ -127,17 +124,6 @@ export default function AdminMedia() {
                 {cakes.map((c) => (
                   <button key={c.id} onClick={() => handleAttach('cake', c.id)} className="block w-full text-left text-sm px-3 py-1.5 hover:bg-champagne/40">
                     {c.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-5">
-              <p className="text-[11px] tracking-wide-cap uppercase text-espresso/50 mb-2">Portfolio</p>
-              <div className="max-h-40 overflow-y-auto space-y-1">
-                {portfolioItems.map((p) => (
-                  <button key={p.id} onClick={() => handleAttach('portfolio', p.id)} className="block w-full text-left text-sm px-3 py-1.5 hover:bg-champagne/40">
-                    {p.title}
                   </button>
                 ))}
               </div>

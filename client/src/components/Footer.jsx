@@ -4,8 +4,8 @@ import Logo from './Logo';
 
 export default function Footer() {
   return (
-    <footer className="bg-espresso text-champagne">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-16 grid grid-cols-1 md:grid-cols-4 gap-12">
+    <footer className="bg-espresso text-champagne border-t border-champagne/10">
+      <div className="max-w-6xl mx-auto px-6 lg:px-10 py-16 grid grid-cols-1 md:grid-cols-4 gap-12">
         <div className="md:col-span-2">
           <Logo light />
           <p className="mt-5 max-w-sm text-champagne/70 text-sm leading-relaxed">

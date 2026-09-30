@@ -11,7 +11,7 @@ export default function MeetTheBaker({ settings }) {
   if (!name && !photo) return null;
 
   return (
-    <section className="relative bg-cream overflow-hidden py-20">
+    <section className="relative bg-ivory overflow-hidden py-20 lg:py-24">
       <div className={`max-w-5xl mx-auto px-6 lg:px-10 grid grid-cols-1 gap-10 lg:gap-14 items-center ${photo ? 'md:grid-cols-[2fr_3fr]' : ''}`}>
         {/* Photo, with a clip-path reveal and a rotated frame accent behind it */}
         {photo && (

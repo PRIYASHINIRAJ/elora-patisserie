@@ -399,6 +399,12 @@ async function migrate() {
   await addColumn('orders', 'admin_notes', 'TEXT');
   await addColumn('users', 'account_status', "TEXT DEFAULT 'active'"); // active | blocked
 
+  // Portfolio = cakes the admin ticks "Show in Portfolio" on (no separate entries).
+  if (!(await columnExists('cakes', 'in_portfolio'))) {
+    await addColumn('cakes', 'in_portfolio', 'INTEGER DEFAULT 0');
+    await db.exec('UPDATE cakes SET in_portfolio = 1');
+  }
+
   await db.exec(`
   CREATE INDEX IF NOT EXISTS idx_payments_session ON payments(stripe_session_id);
   CREATE INDEX IF NOT EXISTS idx_orders_session ON orders(stripe_checkout_session_id);
@@ -435,7 +441,7 @@ async function migrate() {
 
 
 // Bump when the schema/migrations above change, so existing databases re-run them.
-const SCHEMA_VERSION = '1';
+const SCHEMA_VERSION = '2';
 
 async function init() {
   if (!remoteUrl) await client.execute('PRAGMA foreign_keys = ON');

@@ -63,7 +63,7 @@ export default function CustomCake() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-6 lg:px-10 py-16">
+    <div className="max-w-3xl mx-auto px-6 lg:px-10 pt-14 lg:pt-16 pb-24">
       <p className="text-xs tracking-wide-cap uppercase text-gold mb-3">Create Your Cake</p>
       <h1 className="font-display text-5xl mb-4">Design a Custom Cake</h1>
       <p className="text-espresso/60 mb-12 max-w-lg">

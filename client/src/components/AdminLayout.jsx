@@ -3,7 +3,6 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Cake,
-  GalleryHorizontal,
   Image,
   Clapperboard,
   ShoppingBag,
@@ -23,7 +22,6 @@ import { notificationService } from '../services/notificationService';
 const nav = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/cakes', label: 'Cakes', icon: Cake },
-  { to: '/admin/portfolio', label: 'Portfolio', icon: GalleryHorizontal },
   { to: '/admin/media', label: 'Media Library', icon: Image },
   { to: '/admin/studio-videos', label: 'Studio Reels', icon: Clapperboard },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingBag },

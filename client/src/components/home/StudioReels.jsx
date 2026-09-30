@@ -29,7 +29,7 @@ export default function StudioReels({ videos, tiktokHandle }) {
 
   return (
     <section className="bg-espresso py-24 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 mb-10 flex items-end justify-between gap-6">
+      <div className="max-w-6xl mx-auto px-6 lg:px-10 mb-10 flex items-end justify-between gap-6">
         <div>
           <p className="text-xs tracking-wide-cap uppercase text-gold-light mb-3">From the Studio</p>
           <h2 className="font-display text-4xl lg:text-5xl text-champagne">

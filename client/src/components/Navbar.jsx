@@ -43,7 +43,7 @@ export default function Navbar() {
           : 'bg-ivory/90 backdrop-blur-md border-b border-espresso/10 py-0 shadow-[0_1px_0_rgba(0,0,0,0.02)]'
       }`}
     >
-      <div className={`max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between transition-all duration-500 ${transparent ? 'h-24' : 'h-16'}`}>
+      <div className={`max-w-6xl mx-auto px-6 lg:px-10 flex items-center justify-between transition-all duration-500 ${transparent ? 'h-24' : 'h-16'}`}>
         <Link to="/" onClick={() => setOpen(false)}>
           <Logo light={transparent} compact={!transparent} />
         </Link>

@@ -37,7 +37,7 @@ export default function Contact() {
   const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}` : null;
 
   return (
-    <div className="max-w-4xl mx-auto px-6 lg:px-10 py-24">
+    <div className="max-w-5xl mx-auto px-6 lg:px-10 pt-14 lg:pt-16 pb-24">
       <p className="text-xs tracking-wide-cap uppercase text-gold mb-3">Get in Touch</p>
       <h1 className="font-display text-5xl mb-12">Let's talk about your cake.</h1>
 

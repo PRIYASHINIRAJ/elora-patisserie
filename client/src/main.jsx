@@ -4,6 +4,20 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 
+// If any photo fails to load (e.g. a removed external image), show a neutral
+// placeholder instead of the browser's broken-image icon.
+document.addEventListener(
+  'error',
+  (e) => {
+    const img = e.target
+    if (img instanceof HTMLImageElement && !img.dataset.fallback) {
+      img.dataset.fallback = '1'
+      img.src = '/image-placeholder.svg'
+    }
+  },
+  true
+)
+
 const rootEl = document.getElementById('root')
 if (!rootEl) {
   document.body.innerHTML = '<div style="padding:40px;font:16px sans-serif;color:#2B2019;"><strong>ERROR:</strong> &lt;div id="root"&gt; not found in HTML.</div>'
