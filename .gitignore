@@ -5,7 +5,6 @@ dist/
 *.bak
 !.env.example
 *.sqlite
-!client/public/data/elora-initial.sqlite
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
